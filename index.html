@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI 모의면접 분석기</title>
-  <style>
+    <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #333; min-height: 100vh;
     }
     .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -56,6 +56,34 @@
     .demo-btn { background: linear-gradient(135deg,#4caf50,#45a049); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-size: 1rem; cursor: pointer; transition: all .3s ease; margin-left: 15px; box-shadow: 0 5px 15px rgba(76,175,80,0.3); }
     .demo-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(76,175,80,0.4); }
 
+    /* 탭 기능 */
+    .tab-buttons { display: flex; margin-bottom: 20px; background: rgba(255,255,255,0.8); border-radius: 12px; padding: 4px; }
+    .tab-btn { flex: 1; padding: 12px 20px; border: none; background: transparent; border-radius: 8px; cursor: pointer; transition: all .3s ease; font-size: 1rem; color: #666; }
+    .tab-btn.active { background: linear-gradient(135deg,#667eea,#764ba2); color: white; box-shadow: 0 4px 12px rgba(102,126,234,0.3); }
+    .tab-btn:hover:not(.active) { background: rgba(102,126,234,0.1); color: #667eea; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 웹캠 녹화 */
+    .webcam-container { position: relative; width: 100%; max-width: 640px; margin: 0 auto 20px; border-radius: 15px; overflow: hidden; background: #000; aspect-ratio: 16/9; }
+    .webcam-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #667eea; }
+    .webcam-overlay.hidden { display: none; }
+    .webcam-icon { font-size: 4rem; margin-bottom: 15px; }
+    .webcam-text { font-size: 1.2rem; text-align: center; }
+    #webcamPreview { width: 100%; height: 100%; object-fit: cover; }
+    .recording-controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 15px; }
+    .btn-danger { background: linear-gradient(135deg,#e74c3c,#c0392b); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-size: 1rem; cursor: pointer; transition: all .3s ease; box-shadow: 0 5px 15px rgba(231,76,60,0.3); }
+    .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(231,76,60,0.4); }
+    .recording-info { display: flex; gap: 20px; justify-content: center; align-items: center; background: rgba(231,76,60,0.1); border: 2px solid rgba(231,76,60,0.3); border-radius: 10px; padding: 12px; font-size: 1rem; color: #e74c3c; }
+    .recording-time, .recording-size { font-weight: bold; }
+    
+    @media (max-width: 768px) {
+      .tab-btn { padding: 10px 15px; font-size: 0.9rem; }
+      .webcam-container { max-width: 100%; }
+      .recording-controls { flex-direction: column; align-items: center; }
+      .recording-info { flex-direction: column; gap: 10px; }
+    }
+
     /* 프롬프트 섹션 */
     .prompt-section { background: rgba(255,255,255,0.95); border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); backdrop-filter: blur(10px); }
     .prompt-header { text-align: center; margin-bottom: 25px; }
@@ -98,18 +126,18 @@
     @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
     .analyzing { animation: pulse 2s infinite; }
 
-    @media (max-width: 768px) {
+        @media (max-width: 768px) {
       .header h1 { font-size: 2rem; }
       .metrics-grid { grid-template-columns: 1fr; }
       .score-circle { width: 120px; height: 120px; }
       .score-value { font-size: 2rem; }
-    }
-  </style>
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>🎯 AI 모의 면접 분석기</h1>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 AI 모의 면접 분석기</h1>
       <p>AI 기반으로 면접 영상을 분석하고, 세분화된 개선 팁을 제공합니다</p>
     </div>
 
@@ -177,19 +205,52 @@
       </div>
     </section>
 
-    <!-- 업로드 섹션 -->
+    <!-- 업로드/녹화 섹션 -->
     <div class="upload-section" id="uploadSection">
-      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('videoFile').click()">
-        <div class="upload-icon">🎥</div>
-        <div class="upload-text">프레젠테이션 영상을 업로드하세요</div>
-        <div class="file-types">지원 형식: MP4, AVI, MOV, WebM</div>
-        <input type="file" id="videoFile" class="file-input" accept="video/*" />
+      <!-- 탭 버튼 -->
+      <div class="tab-buttons">
+        <button class="tab-btn active" id="uploadTab">📁 파일 업로드</button>
+        <button class="tab-btn" id="recordTab">🎥 웹캠 녹화</button>
+        </div>
+
+      <!-- 파일 업로드 탭 -->
+      <div class="tab-content active" id="uploadContent">
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('videoFile').click()">
+          <div class="upload-icon">📁</div>
+                <div class="upload-text">프레젠테이션 영상을 업로드하세요</div>
+                <div class="file-types">지원 형식: MP4, AVI, MOV, WebM</div>
+          <input type="file" id="videoFile" class="file-input" accept="video/*" />
+        </div>
       </div>
+
+      <!-- 웹캠 녹화 탭 -->
+      <div class="tab-content" id="recordContent">
+        <div class="webcam-container">
+          <video id="webcamPreview" autoplay muted playsinline></video>
+          <div class="webcam-overlay" id="webcamOverlay">
+            <div class="webcam-icon">🎥</div>
+            <div class="webcam-text">웹캠을 시작하려면 아래 버튼을 클릭하세요</div>
+          </div>
+        </div>
+        <div class="recording-controls">
+          <button class="btn-primary" id="startWebcamBtn">📹 웹캠 시작</button>
+          <button class="btn-primary" id="startRecordBtn" style="display:none;">🔴 녹화 시작</button>
+          <button class="btn-danger" id="stopRecordBtn" style="display:none;">⏹️ 녹화 중지</button>
+          <button class="btn-ghost" id="stopWebcamBtn" style="display:none;">📹 웹캠 종료</button>
+        </div>
+        <div class="recording-info" id="recordingInfo" style="display:none;">
+          <span class="recording-time">⏺️ <span id="recordingTime">00:00</span></span>
+          <span class="recording-size">📦 <span id="recordingSize">0 MB</span></span>
+        </div>
+            </div>
+            
+      <!-- 선택된 파일/녹화된 영상 정보 -->
       <div id="selectedFile" class="selected-file" style="display:none;">
-        <div class="file-name"></div>
-        <div class="file-size"></div>
-      </div>
-      <div style="text-align:center;">
+                <div class="file-name"></div>
+                <div class="file-size"></div>
+            </div>
+            
+      <div style="text-align:center; margin-top: 20px;">
         <button class="analyze-btn" id="analyzeBtn" disabled>🔍 분석 시작하기</button>
         <button class="demo-btn" id="demoBtn">🎬 데모 실행</button>
       </div>
@@ -216,16 +277,16 @@
           <span id="timerDisplay">00:00</span>
           <button class="btn-copy" id="startTimerBtn">⏱️ 타이머</button>
         </div>
-      </div>
-    </div>
+            </div>
+        </div>
 
     <!-- 결과 섹션 -->
-    <div class="results-section" id="resultsSection">
-      <div class="score-display">
+        <div class="results-section" id="resultsSection">
+            <div class="score-display">
         <div class="score-circle"><div class="score-value" id="totalScore">0</div></div>
-        <h2>전체 점수</h2>
-        <p>5점 만점 기준</p>
-      </div>
+                <h2>전체 점수</h2>
+                <p>5점 만점 기준</p>
+            </div>
 
       <div class="metrics-grid" id="metricsGrid">
         <!-- 기존 메트릭 -->
@@ -242,16 +303,16 @@
         <div class="metric-card"><div class="metric-title">🙂 미소 유지 비율</div><div class="metric-value" id="smileValue">0%</div><div class="progress-bar"><div class="progress-fill" id="smileProgress"></div></div><div class="metric-description">긍정적 표정 유지 시간</div></div>
         <div class="metric-card"><div class="metric-title">🪞 고개 흔들림</div><div class="metric-value" id="headMoveValue">0%</div><div class="progress-bar"><div class="progress-fill" id="headMoveProgress"></div></div><div class="metric-description">수평/수직 흔들림 안정도</div></div>
         <div class="metric-card"><div class="metric-title">👁️ 깜빡임 빈도</div><div class="metric-value" id="blinkValue">0/min</div><div class="progress-bar"><div class="progress-fill" id="blinkProgress"></div></div><div class="metric-description">분당 10~20회 권장</div></div>
-      </div>
+            </div>
 
-      <div class="coaching-tips">
-        <h3>🎯 맞춤 개선 팁</h3>
+            <div class="coaching-tips">
+                <h3>🎯 맞춤 개선 팁</h3>
         <div id="coachingTips"></div>
-      </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
+    <script>
     // ===== 온보딩 동작 =====
     const onboarding = document.getElementById('onboarding');
     const startUpload = document.getElementById('startUpload');
@@ -355,6 +416,165 @@
       }
     });
 
+    // ===== 탭 기능 =====
+    const uploadTab = document.getElementById('uploadTab');
+    const recordTab = document.getElementById('recordTab');
+    const uploadContent = document.getElementById('uploadContent');
+    const recordContent = document.getElementById('recordContent');
+
+    uploadTab?.addEventListener('click', () => {
+      uploadTab.classList.add('active');
+      recordTab.classList.remove('active');
+      uploadContent.classList.add('active');
+      recordContent.classList.remove('active');
+    });
+
+    recordTab?.addEventListener('click', () => {
+      recordTab.classList.add('active');
+      uploadTab.classList.remove('active');
+      recordContent.classList.add('active');
+      uploadContent.classList.remove('active');
+    });
+
+    // ===== 웹캠 녹화 기능 =====
+    let mediaStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingTimer = null;
+    let recordingSeconds = 0;
+    let recordedBlob = null;
+
+    const webcamPreview = document.getElementById('webcamPreview');
+    const webcamOverlay = document.getElementById('webcamOverlay');
+    const startWebcamBtn = document.getElementById('startWebcamBtn');
+    const startRecordBtn = document.getElementById('startRecordBtn');
+    const stopRecordBtn = document.getElementById('stopRecordBtn');
+    const stopWebcamBtn = document.getElementById('stopWebcamBtn');
+    const recordingInfo = document.getElementById('recordingInfo');
+    const recordingTime = document.getElementById('recordingTime');
+    const recordingSize = document.getElementById('recordingSize');
+
+    // 웹캠 시작
+    startWebcamBtn?.addEventListener('click', async () => {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 1280, height: 720, facingMode: 'user' }, 
+          audio: true 
+        });
+        
+        webcamPreview.srcObject = mediaStream;
+        webcamOverlay.classList.add('hidden');
+        
+        startWebcamBtn.style.display = 'none';
+        startRecordBtn.style.display = 'inline-block';
+        stopWebcamBtn.style.display = 'inline-block';
+        
+      } catch (error) {
+        alert('웹캠 접근 권한이 필요합니다. 브라우저 설정에서 카메라와 마이크 권한을 허용해주세요.');
+        console.error('웹캠 접근 오류:', error);
+      }
+    });
+
+    // 녹화 시작
+    startRecordBtn?.addEventListener('click', () => {
+      if (!mediaStream) return;
+      
+      recordedChunks = [];
+      recordingSeconds = 0;
+      
+      try {
+        mediaRecorder = new MediaRecorder(mediaStream, {
+          mimeType: 'video/webm;codecs=vp9,opus'
+        });
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+            // 실시간 크기 업데이트
+            const totalSize = recordedChunks.reduce((size, chunk) => size + chunk.size, 0);
+            recordingSize.textContent = (totalSize / 1024 / 1024).toFixed(1) + ' MB';
+          }
+        };
+        
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(recordedChunks, { type: 'video/webm' });
+          
+          // 녹화된 파일을 selectedFile로 설정
+          selectedFile = new File([recordedBlob], `recorded_${Date.now()}.webm`, { type: 'video/webm' });
+          
+          // 파일 정보 표시
+          const selectedFileDiv = document.getElementById('selectedFile');
+          selectedFileDiv.style.display = 'block';
+          selectedFileDiv.querySelector('.file-name').textContent = selectedFile.name;
+          selectedFileDiv.querySelector('.file-size').textContent = formatFileSize(selectedFile.size);
+          
+          // 분석 버튼 활성화
+          analyzeBtn.disabled = false;
+          
+          alert('녹화가 완료되었습니다! 이제 분석을 시작할 수 있습니다.');
+        };
+        
+        mediaRecorder.start(100); // 100ms마다 데이터 수집
+        
+        // UI 업데이트
+        startRecordBtn.style.display = 'none';
+        stopRecordBtn.style.display = 'inline-block';
+        recordingInfo.style.display = 'flex';
+        
+        // 타이머 시작
+        recordingTimer = setInterval(() => {
+          recordingSeconds++;
+          const mins = Math.floor(recordingSeconds / 60);
+          const secs = recordingSeconds % 60;
+          recordingTime.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+        }, 1000);
+        
+      } catch (error) {
+        alert('녹화 시작 중 오류가 발생했습니다: ' + error.message);
+        console.error('녹화 오류:', error);
+      }
+    });
+
+    // 녹화 중지
+    stopRecordBtn?.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+        recordingTimer = null;
+      }
+      
+      // UI 업데이트
+      stopRecordBtn.style.display = 'none';
+      startRecordBtn.style.display = 'inline-block';
+      recordingInfo.style.display = 'none';
+    });
+
+    // 웹캠 종료
+    stopWebcamBtn?.addEventListener('click', () => {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      
+      webcamPreview.srcObject = null;
+      webcamOverlay.classList.remove('hidden');
+      
+      // 녹화 중이면 중지
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecordBtn.click();
+      }
+      
+      // UI 리셋
+      startWebcamBtn.style.display = 'inline-block';
+      startRecordBtn.style.display = 'none';
+      stopRecordBtn.style.display = 'none';
+      stopWebcamBtn.style.display = 'none';
+      recordingInfo.style.display = 'none';
+    });
+
     // ===== 업로드 처리 =====
     let selectedFile = null;
     const fileInput = document.getElementById('videoFile');
@@ -389,9 +609,9 @@
 
     function animateResults(){
       // 샘플 결과 (백엔드 연동 시 서버 값으로 대체)
-      const results = {
-        totalScore: 4.2,
-        wpm: 165,
+            const results = {
+                totalScore: 4.2,
+                wpm: 165,
         volume: 85, // %
         gaze: 78,   // %
         posture: 82,// %
@@ -451,6 +671,6 @@
     }
 
     function runDemo(){ selectedFile = { name:'demo_presentation.mp4', size: 15*1024*1024 }; const selectedFileDiv=document.getElementById('selectedFile'); selectedFileDiv.style.display='block'; selectedFileDiv.querySelector('.file-name').textContent='demo_presentation.mp4'; selectedFileDiv.querySelector('.file-size').textContent='15.0 MB'; analyzeBtn.disabled=false; setTimeout(()=> simulateAnalysis(), 400); }
-  </script>
+    </script>
 </body>
 </html>
