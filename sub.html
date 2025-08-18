@@ -402,163 +402,6 @@
 
         let currentImage = null;
         let processedImageData = null;
-        let ocrModel = null;
-        let textDetectionModel = null;
-        let isModelsLoaded = false;
-
-        // 간소화된 모델 초기화 (빠른 로딩)
-        async function initializeModels() {
-            const maxLoadTime = 10000; // 10초 타임아웃
-            const timeoutId = setTimeout(() => {
-                console.warn('모델 로딩 타임아웃, Tesseract 모드로 전환');
-                fallbackToTesseract();
-            }, maxLoadTime);
-
-            try {
-                // 로딩 메시지 표시
-                showLoadingMessage('AI 모델을 초기화하고 있습니다...');
-
-                // TensorFlow.js 기본 초기화만 (외부 모델 로드 제외)
-                if (typeof tf !== 'undefined') {
-                    await tf.ready();
-                    console.log('TensorFlow.js 초기화 완료');
-                    
-                    // 간단한 로컬 모델만 생성 (외부 다운로드 없음)
-                    textDetectionModel = createSimpleTextDetectionModel();
-                    ocrModel = createSimpleOCRModel();
-                    
-                    isModelsLoaded = true;
-                    clearTimeout(timeoutId);
-                    hideLoadingMessage();
-                    
-                    showSuccessMessage('🤖 AI 모델 준비 완료!');
-                } else {
-                    throw new Error('TensorFlow.js 로드 실패');
-                }
-
-            } catch (error) {
-                console.error('모델 초기화 오류:', error);
-                clearTimeout(timeoutId);
-                fallbackToTesseract();
-            }
-        }
-
-        function showLoadingMessage(message) {
-            if (loadingArea) {
-                loadingArea.style.display = 'block';
-                loadingArea.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <p>${message}</p>
-                `;
-            }
-        }
-
-        function hideLoadingMessage() {
-            if (loadingArea) {
-                loadingArea.style.display = 'none';
-            }
-        }
-
-        function showSuccessMessage(message) {
-            const statusDiv = document.createElement('div');
-            statusDiv.innerHTML = `
-                <div style="background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
-                    ${message}
-                </div>
-            `;
-            
-            const uploadSection = document.querySelector('.upload-section');
-            if (uploadSection && preprocessingOptions) {
-                uploadSection.insertBefore(statusDiv, preprocessingOptions);
-                setTimeout(() => statusDiv.remove(), 3000);
-            }
-        }
-
-        function fallbackToTesseract() {
-            isModelsLoaded = false;
-            hideLoadingMessage();
-            
-            // Tesseract 폴백 메시지
-            const fallbackMsg = document.createElement('div');
-            fallbackMsg.innerHTML = `
-                <div style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
-                    📝 Tesseract OCR 모드로 동작합니다 (AI 모델 로드 실패)
-                </div>
-            `;
-            
-            const uploadSection = document.querySelector('.upload-section');
-            if (uploadSection && preprocessingOptions) {
-                uploadSection.insertBefore(fallbackMsg, preprocessingOptions);
-            }
-            
-            // Tesseract 스크립트 로드
-            if (typeof Tesseract === 'undefined') {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
-                script.onload = () => console.log('Tesseract 로드 완료');
-                script.onerror = () => console.error('Tesseract 로드 실패');
-                document.head.appendChild(script);
-            }
-        }
-
-        // 경량화된 텍스트 감지 모델
-        function createSimpleTextDetectionModel() {
-            // 실제로는 단순한 더미 모델 (전체 이미지를 하나의 텍스트 영역으로 처리)
-            return {
-                predict: async (tensor) => {
-                    // 더미 히트맵 생성 (중앙에 텍스트가 있다고 가정)
-                    const size = 32;
-                    const dummyHeatmap = new Float32Array(size * size);
-                    for (let i = 0; i < dummyHeatmap.length; i++) {
-                        const x = i % size;
-                        const y = Math.floor(i / size);
-                        // 중앙 영역에 높은 값
-                        const centerX = size / 2;
-                        const centerY = size / 2;
-                        const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-                        dummyHeatmap[i] = Math.max(0, 1 - dist / (size / 2));
-                    }
-                    
-                    return {
-                        data: async () => dummyHeatmap,
-                        dispose: () => {}
-                    };
-                }
-            };
-        }
-
-        // 간소화된 OCR 모델 (더미 모델)
-        function createSimpleOCRModel() {
-            const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789가나다라마바사아자차카타파하';
-            
-            // 실제 딥러닝 모델 대신 더미 OCR 반환
-            return {
-                charset: charset,
-                predict: async (tensor) => {
-                    // 더미 예측 결과 생성 (랜덤 텍스트)
-                    const dummyTexts = [
-                        '텍스트 인식 결과입니다',
-                        '한국어 영어 123',
-                        'OCR 테스트',
-                        '이미지에서 추출된 텍스트',
-                        'AI 모델 처리 완료'
-                    ];
-                    
-                    const randomText = dummyTexts[Math.floor(Math.random() * dummyTexts.length)];
-                    const probabilities = new Float32Array(randomText.length * (charset.length + 1));
-                    
-                    // 더미 확률 분포 생성
-                    for (let i = 0; i < probabilities.length; i++) {
-                        probabilities[i] = Math.random();
-                    }
-                    
-                    return {
-                        data: async () => probabilities,
-                        dispose: () => {}
-                    };
-                }
-            };
-        }
 
         // 드래그 앤 드롭 이벤트
         uploadArea.addEventListener('dragover', (e) => {
@@ -809,47 +652,12 @@
             reader.readAsDataURL(currentImage);
         });
 
-        // 간소화된 딥러닝 OCR 처리
-        async function performDeepLearningOCR(imageCanvas) {
-            try {
-                // 간단한 더미 처리 (실제 딥러닝 대신)
-                await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
-                
-                const dummyResults = [
-                    '이미지에서 텍스트를 감지했습니다',
-                    'AI 모델 처리 결과입니다',
-                    '딥러닝 OCR 테스트',
-                    '한국어 영어 숫자 123'
-                ];
-                
-                const randomResult = dummyResults[Math.floor(Math.random() * dummyResults.length)];
-                
-                return {
-                    text: randomResult,
-                    confidence: 0.85 + Math.random() * 0.1, // 85-95% 신뢰도
-                    regions: [{
-                        text: randomResult,
-                        confidence: 0.9,
-                        bbox: { x: 0, y: 0, width: imageCanvas.width, height: imageCanvas.height }
-                    }]
-                };
-                
-            } catch (error) {
-                console.error('딥러닝 OCR 오류:', error);
-                // 에러 시 Tesseract로 폴백
-                throw error;
-            }
-        }
+        // 더미 AI 모델 제거 - Tesseract만 사용
 
         // 복잡한 함수들 제거 - 간단한 처리만 유지
 
         processBtn.addEventListener('click', async () => {
             if (!currentImage) return;
-
-            // 모델이 로드되지 않았으면 초기화
-            if (!isModelsLoaded) {
-                await initializeModels();
-            }
 
             loadingArea.style.display = 'block';
             resultArea.style.display = 'none';
@@ -865,6 +673,25 @@
                 };
 
                 const selectedLanguage = languageSelect.value;
+                
+                // Tesseract 로딩 확인 및 로드
+                if (typeof Tesseract === 'undefined') {
+                    loadingArea.innerHTML = `
+                        <div class="loading-spinner"></div>
+                        <p>📦 Tesseract OCR 엔진을 로딩하고 있습니다...</p>
+                    `;
+                    
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                    
+                    // Tesseract 로드 대기
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
                 
                 // 이미지를 캔버스로 변환
                 const img = new Image();
@@ -891,52 +718,49 @@
                     reader.readAsDataURL(currentImage);
                 });
 
-                let finalText = '';
+                // Tesseract OCR 실행
+                loadingArea.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <p>🔍 이미지에서 텍스트를 추출하고 있습니다...</p>
+                `;
 
-                if (isModelsLoaded && ocrModel && textDetectionModel) {
-                    // PyTorch 기반 딥러닝 OCR 사용
-                    loadingArea.innerHTML = `
-                        <div class="loading-spinner"></div>
-                        <p>🤖 AI 모델로 텍스트를 분석하고 있습니다...</p>
-                    `;
-
-                    const ocrResult = await performDeepLearningOCR(imageCanvas);
-                    finalText = ocrResult.text;
-                    
-                    // 신뢰도 표시
-                    if (ocrResult.confidence > 0) {
-                        const confidencePercent = Math.round(ocrResult.confidence * 100);
-                        finalText += `\n\n[AI 신뢰도: ${confidencePercent}%]`;
-                    }
-                } else {
-                    // Tesseract 폴백
-                    loadingArea.innerHTML = `
-                        <div class="loading-spinner"></div>
-                        <p>📝 Tesseract로 텍스트를 추출하고 있습니다...</p>
-                    `;
-
-                    if (typeof Tesseract !== 'undefined') {
-                        const { data: { text } } = await Tesseract.recognize(
-                            imageCanvas,
-                            selectedLanguage.replace('+', '+'),
-                            {
-                                tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-                                preserve_interword_spaces: '1'
+                const { data: { text, confidence } } = await Tesseract.recognize(
+                    imageCanvas,
+                    selectedLanguage,
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                const progress = Math.round(m.progress * 100);
+                                loadingArea.innerHTML = `
+                                    <div class="loading-spinner"></div>
+                                    <p>🔍 텍스트를 추출하고 있습니다... ${progress}%</p>
+                                `;
                             }
-                        );
-                        finalText = text;
-                    } else {
-                        throw new Error('OCR 엔진을 사용할 수 없습니다.');
+                        },
+                        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+                        tessedit_char_whitelist: '', // 모든 문자 허용
+                        preserve_interword_spaces: '1',
+                        tessedit_do_invert: '0',
+                        tessedit_create_hocr: '1'
                     }
-                }
+                );
 
                 loadingArea.style.display = 'none';
                 resultArea.style.display = 'block';
                 
                 // 텍스트 후처리
-                let cleanedText = finalText.trim();
+                let cleanedText = text.trim();
                 if (cleanedText) {
-                    cleanedText = cleanedText.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n');
+                    // 불필요한 공백 정리
+                    cleanedText = cleanedText.replace(/\s+/g, ' ');
+                    // 줄바꿈 정리
+                    cleanedText = cleanedText.replace(/\n\s*\n/g, '\n');
+                }
+                
+                // 신뢰도 추가
+                if (confidence > 0) {
+                    const confidencePercent = Math.round(confidence);
+                    cleanedText += `\n\n[OCR 신뢰도: ${confidencePercent}%]`;
                 }
                 
                 resultArea.value = cleanedText || '텍스트를 찾을 수 없습니다. 전처리 옵션을 조정하거나 이미지 품질을 확인해주세요.';
@@ -954,10 +778,21 @@
             processBtn.disabled = false;
         });
 
-        // 페이지 로드 시 모델 초기화 (즉시 실행)
+        // 페이지 로드 시 Tesseract 준비
         window.addEventListener('load', () => {
-            // 즉시 초기화 시도, 실패 시 Tesseract로 폴백
-            initializeModels();
+            // Tesseract OCR 준비 메시지
+            const statusDiv = document.createElement('div');
+            statusDiv.innerHTML = `
+                <div style="background: #e3f2fd; color: #1976d2; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
+                    📝 Tesseract OCR 엔진 준비 완료! 이미지를 업로드해주세요.
+                </div>
+            `;
+            
+            const uploadSection = document.querySelector('.upload-section');
+            if (uploadSection) {
+                uploadSection.insertBefore(statusDiv, uploadSection.firstChild.nextSibling);
+                setTimeout(() => statusDiv.remove(), 5000);
+            }
         });
 
         clearBtn.addEventListener('click', () => {
