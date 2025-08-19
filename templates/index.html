@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🎯 AI 모의 면접 분석기</h1>
+        <p>AI 기반으로 면접 영상을 분석하고, 세분화된 개선 팁을 제공합니다</p>
+    </div>
+
+    <!-- 온보딩: 촬영 범위 안내 + 기본 멘트 -->
+    <section class="onboarding" id="onboarding">
+        <div class="row" style="margin-bottom:14px; gap:12px;">
+            <h2>첫 시작 가이드</h2>
+            <span class="tag">촬영 범위</span>
+            <span class="tag">기본 멘트</span>
+            <span class="tag">체크리스트</span>
+        </div>
+        <div class="onboarding-grid">
+            <div class="card">
+                <h3>📷 카메라 프레이밍 & 범위 지정</h3>
+                <div class="guide-figure" aria-label="권장 프레이밍 도식">
+                    <!-- 간단한 프레이밍 가이드 SVG -->
+                    <svg viewBox="0 0 800 450" role="img">
+                        <defs>
+                            <linearGradient id="g" x1="0" x2="1">
+                                <stop offset="0%" stop-color="#00579333" />
+                                <stop offset="100%" stop-color="#E6F0F533" />
+                            </linearGradient>
+                        </defs>
+                        <!-- 프레임 -->
+                        <rect x="20" y="20" width="760" height="410" rx="12" ry="12" fill="url(#g)" stroke="#005793" stroke-dasharray="8 6" />
+                        <!-- 안전영역 -->
+                        <rect x="160" y="70" width="480" height="310" rx="10" ry="10" fill="none" stroke="#F76800" stroke-width="2" stroke-dasharray="6 6" />
+                        <!-- 인물 가이드 -->
+                        <circle cx="400" cy="170" r="45" fill="#E6F0F5" stroke="#005793" />
+                        <rect x="360" y="215" width="80" height="90" rx="10" fill="#E6F0F5" stroke="#005793" />
+                        <!-- 텍스트 -->
+                        <text x="400" y="120" text-anchor="middle" font-size="16" fill="#005793">머리 꼭대기 여유 5~10%</text>
+                        <text x="400" y="330" text-anchor="middle" font-size="16" fill="#005793">가슴 윗부분~어깨선 포함</text>
+                        <text x="400" y="400" text-anchor="middle" font-size="14" fill="#555">눈높이 = 카메라 높이 / 배경은 단순 & 밝게</text>
+                    </svg>
+                </div>
+                <ul style="margin-top:12px; padding-left:18px;">
+                    <li>화면에 <b>머리~어깨~가슴 윗부분</b>이 들어오도록 1m 전후 거리 유지</li>
+                    <li><b>눈높이=카메라 높이</b> 맞추기 (로우앵글/하이앵글 지양)</li>
+                    <li>정면 45~60cm 앞에 시선 고정(웹캠 렌즈)</li>
+                    <li>배경은 <b>단색/정돈</b>, 얼굴 정면 <b>광원 1</b> 유지</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>🗣️ 기본 멘트 템플릿 (30~45초)</h3>
+                <textarea id="baseScript" class="script">안녕하세요, [이름]입니다. 저는 [전공/경험]을 바탕으로 [핵심 역량 1, 2]을 갖추고 있습니다. 최근에는 [프로젝트/인턴/성과]에서 [구체적 행동]을 통해 [수치/결과]를 만들었습니다. 이 경험을 바탕으로 귀사에서 [직무]로서 [가치 기여]를 실현하고 싶습니다. 감사합니다.</textarea>
+                <div class="row" style="margin-top:10px;">
+                    <button class="btn-copy" id="copyScript">복사</button>
+                    <span class="small">팁: 120~160 WPM을 목표로, 문장 끝 호흡을 분명히!</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>✅ 촬영 체크리스트</h3>
+                <ul style="padding-left:18px; line-height:1.8;">
+                    <li>배경 소음 <b>OFF</b> / 폰 알림 <b>무음</b></li>
+                    <li>조명: 얼굴 정면 <b>그림자 최소화</b></li>
+                    <li>프레이밍: 머리 윗공간 5~10%, 어깨선 포함</li>
+                    <li>렌즈 응시 테스트(3초) → 녹화 시작</li>
+                </ul>
+                <div class="row" style="margin-top:14px;">
+                    <button class="btn-primary" id="startUpload">업로드로 이동</button>
+                    <button class="btn-ghost" id="skipOnboarding">다음에 보기</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 업로드/녹화 섹션 -->
+    <div class="upload-section" id="uploadSection">
+        <!-- 탭 버튼 -->
+        <div class="tab-buttons">
+            <button class="tab-btn active" id="uploadTab">📁 파일 업로드</button>
+            <button class="tab-btn" id="recordTab">🎥 웹캠 녹화</button>
+        </div>
+
+        <!-- 파일 업로드 탭 -->
+        <div class="tab-content active" id="uploadContent">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">프레젠테이션 영상을 업로드하세요</div>
+                <div class="file-types">지원 형식: MP4, AVI, MOV, WebM</div>
+                <input type="file" id="videoFile" class="file-input" accept="video/*" />
+            </div>
+        </div>
+
+        <!-- 웹캠 녹화 탭 -->
+        <div class="tab-content" id="recordContent">
+            <div class="webcam-container">
+                <video id="webcamPreview" autoplay muted playsinline></video>
+                <div class="webcam-overlay" id="webcamOverlay">
+                    <div class="webcam-icon">🎥</div>
+                    <div class="webcam-text">웹캠을 시작하려면 아래 버튼을 클릭하세요</div>
+                </div>
+            </div>
+            <div class="recording-controls">
+                <button class="btn-primary" id="startWebcamBtn">📹 웹캠 시작</button>
+                <button class="btn-primary" id="startRecordBtn" style="display:none;">🔴 녹화 시작</button>
+                <button class="btn-danger" id="stopRecordBtn" style="display:none;">⏹️ 녹화 중지</button>
+                <button class="btn-ghost" id="stopWebcamBtn" style="display:none;">📹 웹캠 종료</button>
+            </div>
+            <div class="recording-info" id="recordingInfo" style="display:none;">
+                <span class="recording-time">⏺️ <span id="recordingTime">00:00</span></span>
+                <span class="recording-size">📦 <span id="recordingSize">0 MB</span></span>
+            </div>
+        </div>
+        
+        <!-- 선택된 파일/녹화된 영상 정보 -->
+        <div id="selectedFile" class="selected-file" style="display:none;">
+            <div class="file-name"></div>
+            <div class="file-size"></div>
+        </div>
+        
+        <div style="text-align:center; margin-top: 20px;">
+            <button class="analyze-btn" id="analyzeBtn" disabled>🔍 분석 시작하기</button>
+            <button class="demo-btn" id="demoBtn">🎬 데모 실행</button>
+        </div>
+    </div>
+
+    <!-- 프롬프트 섹션 -->
+    <div class="prompt-section" id="promptSection">
+        <div class="prompt-header">
+            <h3>📝 면접 대본 프롬프터</h3>
+            <p>영상 촬영 시 아래 텍스트를 보며 자연스럽게 읽어보세요</p>
+        </div>
+        <div class="prompt-display" id="promptDisplay">
+            <div class="prompt-text">
+                안녕하세요, [이름]입니다. 저는 [전공/경험]을 바탕으로 [핵심 역량 1, 2]을 갖추고 있습니다. 
+                최근에는 [프로젝트/인턴/성과]에서 [구체적 행동]을 통해 [수치/결과]를 만들었습니다. 
+                이 경험을 바탕으로 귀사에서 [직무]로서 [가치 기여]를 실현하고 싶습니다. 감사합니다.
+            </div>
+        </div>
+        <div class="prompt-controls">
+            <button class="btn-ghost" id="editPromptBtn">✏️ 수정</button>
+            <button class="btn-ghost" id="fontSizeBtn">🔤 글자 크기</button>
+            <button class="btn-ghost" id="resetPromptBtn">🔄 기본값</button>
+            <div class="prompt-timer">
+                <span id="timerDisplay">00:00</span>
+                <button class="btn-copy" id="startTimerBtn">⏱️ 타이머</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 결과 섹션 -->
+    <div class="results-section" id="resultsSection">
+        <div class="score-display">
+            <div class="score-circle"><div class="score-value" id="totalScore">0</div></div>
+            <h2>전체 점수</h2>
+            <p>5점 만점 기준</p>
+        </div>
+
+        <div class="metrics-grid" id="metricsGrid">
+            <!-- 기존 메트릭 -->
+            <div class="metric-card">
+                <div class="metric-title">🗣️ 말하기 속도</div>
+                <div class="metric-value" id="wpmValue">0 WPM</div>
+                <div class="progress-bar"><div class="progress-fill" id="wpmProgress"></div></div>
+                <div class="metric-description">적정 속도: 140-180 단어/분</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🔊 음성 볼륨</div>
+                <div class="metric-value" id="volumeValue">적정</div>
+                <div class="progress-bar"><div class="progress-fill" id="volumeProgress"></div></div>
+                <div class="metric-description">일정하고 명료한 음성</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">👀 시선 집중도</div>
+                <div class="metric-value" id="gazeValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="gazeProgress"></div></div>
+                <div class="metric-description">카메라를 바라본 시간</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">💺 자세 안정성</div>
+                <div class="metric-value" id="postureValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="postureProgress"></div></div>
+                <div class="metric-description">바른 자세 유지도</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">😊 표정 관리</div>
+                <div class="metric-value" id="expressionValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="expressionProgress"></div></div>
+                <div class="metric-description">적절한 표정 변화</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">💡 환경 점수</div>
+                <div class="metric-value" id="environmentValue">0점</div>
+                <div class="progress-bar"><div class="progress-fill" id="environmentProgress"></div></div>
+                <div class="metric-description">조명 및 배경 품질</div>
+            </div>
+            <!-- 세분화 추가 메트릭 -->
+            <div class="metric-card">
+                <div class="metric-title">🧩 불필요어 비율(음/어)</div>
+                <div class="metric-value" id="fillerValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="fillerProgress"></div></div>
+                <div class="metric-description">총 발화 대비 불필요어 비중</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⏸️ 침묵 비율</div>
+                <div class="metric-value" id="silenceValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="silenceProgress"></div></div>
+                <div class="metric-description">의도된/비의도된 정지 구분</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🔁 말끝 흐림(어말강세)</div>
+                <div class="metric-value" id="endingValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="endingProgress"></div></div>
+                <div class="metric-description">문장 말미 명료도</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🙂 미소 유지 비율</div>
+                <div class="metric-value" id="smileValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="smileProgress"></div></div>
+                <div class="metric-description">긍정적 표정 유지 시간</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🪞 고개 흔들림</div>
+                <div class="metric-value" id="headMoveValue">0%</div>
+                <div class="progress-bar"><div class="progress-fill" id="headMoveProgress"></div></div>
+                <div class="metric-description">수평/수직 흔들림 안정도</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">👁️ 깜빡임 빈도</div>
+                <div class="metric-value" id="blinkValue">0/min</div>
+                <div class="progress-bar"><div class="progress-fill" id="blinkProgress"></div></div>
+                <div class="metric-description">분당 10~20회 권장</div>
+            </div>
+        </div>
+
+        <div class="coaching-tips">
+            <h3>🎯 맞춤 개선 팁</h3>
+            <div id="coachingTips"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
